@@ -1,7 +1,7 @@
 # Segmentation Application
 
 ## Description
-This is a simple desktop application built with Python and Tkinter for image segmentation using YOLO.
+This is a simple desktop application built with Python and Tkinter for petroglyphs detection and segmentation using YOLO.
 
 ## Requirements
 - Python 3.x
