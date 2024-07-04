@@ -10,6 +10,7 @@ This is a simple desktop application built with Python and Tkinter for petroglyp
 - OpenCV
 - Tkinter
 - svgwrite
+- shapely
 
 ## Installation
 1. Clone the repository.
