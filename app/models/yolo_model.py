@@ -11,13 +11,18 @@ class YoloModel:
         self.current_results = None
         self.current_img_str = None
         self.current_img = None
+        self.current_img_draw = None
         self.current_svg_content = None
         self.current_img_pil_segmented = None
+        self.masks = None
         self.mask_color = (255, 0, 0)
         self.transparency = 100
         self.transparency_svg = self.transparency/255
         self.mask_fill = (255, 0, 0, self.transparency)
         self.all_processing = False
+        self.mask_adding = False
+        self.selected_mask_index = None
+        self.new_mask_points = []
         self.processing_event = threading.Event()
         
 
@@ -36,5 +41,8 @@ class YoloModel:
 
     def set_all_processing(self, all_processing):
         self.all_processing = all_processing
+
+    def set_mask_adding(self, mask_adding):
+        self.mask_adding = mask_adding
 
 

@@ -6,7 +6,8 @@ from PIL import Image, ImageTk, ImageDraw
 import torch
 import tkinter as tk
 from tkinter import colorchooser, filedialog
-from app.utils.image_utils import create_svg_content
+from app.utils.image_utils import create_svg_content, point_in_polygon, merge_polygons, mask2polygon
+from shapely.geometry import Polygon
 
 class MainController:
     def __init__(self, view, model):
@@ -22,7 +23,82 @@ class MainController:
         self.view.button_create_svg.config(command=self.OnClick_SVG)
         self.view.button_create_jpg.config(command=self.OnClick_JPG)
         self.view.button_create_both.config(command=self.OnClick_Both)
+        self.view.delete_button.config(command=self.delete_selected_mask)
         self.view.all_checkbox.config(command=self.toggle_all)
+        self.view.add_mask_checkbox.config(command=self.toggle_add_mask)
+        self.view.complete_mask_button.config(command=self.OnClick_Complete)
+        self.view.label_image_segmented.bind("<Button-1>", self.OnClick_Mask)
+        
+
+    def OnClick_Mask(self, event):
+        x, y = event.x, event.y
+        
+        height, width, _ = self.model.current_img.shape
+
+        # Adjust the coordinates according to the scale of the image
+        x_scaled = x * width / self.view.display_size
+        y_scaled = y * height / self.view.display_size
+
+        if self.model.mask_adding:
+            self.model.new_mask_points.append([x_scaled, y_scaled])
+            # Draw point on the image
+            draw = ImageDraw.Draw(self.model.current_img_draw)
+            draw.ellipse((x-3, y-3, x+3, y+3), fill=self.model.mask_fill, outline=self.model.mask_fill)
+            
+            self.view.update_image(self.model.current_img_draw)
+
+        else: 
+            self.model.selected_mask_index = self.get_mask_at_position(x_scaled, y_scaled)
+            if self.model.selected_mask_index is not None:
+                self.view.delete_button.pack(side=tk.LEFT, padx=10) 
+                self.display_svg_in_label()
+
+    def OnClick_Complete(self):
+        if len(self.model.new_mask_points) > 2:
+
+            points = [(int(point[0]), int(point[1])) for point in self.model.new_mask_points]
+            self.model.masks.append(Polygon(points))
+
+            self.model.masks = merge_polygons(self.model.masks)
+
+            # Create SVG and display it
+            image_path = self.model.image_paths[self.model.current_index]
+            masks = self.model.masks
+            img_str = self.model.current_img_str
+            transparency_svg = self.model.transparency_svg
+            current_img = self.model.current_img
+            mask_color = self.model.mask_color
+            self.model.current_svg_content = create_svg_content(masks, img_str, transparency_svg, current_img, mask_color, image_path)   
+            self.display_svg_in_label()
+            
+            self.model.new_mask_points.clear()  # Clear points after drawing 
+
+    def get_mask_at_position(self, x, y):
+        # Check if the coordinates (x, y) are inside one of the masks
+        if self.model.current_results[0].masks != None:
+            for i, mask in enumerate(self.model.masks):
+                if point_in_polygon(x, y, mask):
+                    return i
+        return None
+
+    def delete_selected_mask(self):
+        # Delete selected mask
+        if self.model.selected_mask_index is not None:
+            del self.model.masks[self.model.selected_mask_index]
+
+            self.model.selected_mask_index = None
+            
+            # Create SVG and display it
+            image_path = self.model.image_paths[self.model.current_index]
+            masks = self.model.masks
+            img_str = self.model.current_img_str
+            transparency_svg = self.model.transparency_svg
+            current_img = self.model.current_img
+            mask_color = self.model.mask_color
+            self.model.current_svg_content = create_svg_content(masks, img_str, transparency_svg, current_img, mask_color, image_path)     
+            self.display_svg_in_label()
+
+            self.view.delete_button.pack_forget()  # Hide the button after deletion
 
     def choose_color(self):
         color = colorchooser.askcolor(title="Choose a color")
@@ -30,10 +106,18 @@ class MainController:
             self.model.set_mask_color(color[0])
 
     def update_transparency(self, val):
-        self.model.set_transparency(int(val))
+        transparency = int(float(val))
+        self.model.set_transparency(int(transparency))
 
     def toggle_all(self):
         self.model.set_all_processing(self.view.all_var.get())
+    
+    def toggle_add_mask(self):
+        self.model.set_mask_adding(self.view.add_mask_var.get())
+        if self.model.mask_adding: 
+            self.view.complete_mask_button.pack(pady=10)
+        else:
+            self.view.complete_mask_button.pack_forget()
 
     def select_image_folder(self):
         image_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg;*.png;*.bmp;*.jpeg;*.tif;*.tiff;*.pfm")])
@@ -43,12 +127,13 @@ class MainController:
 
     def on_click_display_update(self):
         # Create SVG and display it
-        results = self.model.current_results
+        image_path = self.model.image_paths[self.model.current_index]
+        masks = self.model.masks
         img_str = self.model.current_img_str
         transparency_svg = self.model.transparency_svg
         current_img = self.model.current_img
         mask_color = self.model.mask_color
-        self.model.current_svg_content = create_svg_content(results, img_str, transparency_svg, current_img, mask_color)     
+        self.model.current_svg_content = create_svg_content(masks, img_str, transparency_svg, current_img, mask_color, image_path)     
         self.display_svg_in_label()
 
     def OnClick_SVG(self):
@@ -91,11 +176,7 @@ class MainController:
         if self.model.current_index < len(self.model.image_paths):
             self.display_segmentation()
         else:
-            # Display completion message when all images are processed
-            tk.messagebox.showinfo("Processing complete", "All images have been processed.")
-            self.view.label_image.image = None  # Effacer l'image affichée
-            self.view.label_image_segmented.image = None
-            self.view.label_text.config( text= "No images being processed")
+            self.end()
 
     # Function to create JPG file
     def create_jpg(self, bool):
@@ -118,14 +199,16 @@ class MainController:
             if self.model.current_index < len(self.model.image_paths):
                 self.display_segmentation()
             else:
-                # Display completion message when all images are processed
-                tk.messagebox.showinfo("Processing complete", "All images have been processed.")
-                self.view.label_image.image = None  # Effacer l'image affichée
-                self.view.label_image_segmented.image = None
-                self.view.label_text.config( text= "No images being processed")
+                self.end()
 
     # Function to display segmentation of the current image
-    def display_segmentation(self):    
+    def display_segmentation(self):   
+
+        # Uncheck the Checkbutton before hiding it
+        self.view.add_mask_var.set(0)
+        self.toggle_add_mask()
+        self.view.add_mask_checkbox.pack_forget()
+        
         if self.model.current_index < len(self.model.image_paths):
             def run_segmentation():
                 image_path = self.model.image_paths[self.model.current_index]
@@ -144,19 +227,24 @@ class MainController:
 
                 results = self.model.segmente(image_path, retina_masks=True, device = device, iou = 0.2)
 
+                polygons = mask2polygon(results)
+                masks = merge_polygons(polygons)
+
                 img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
                 img_pil = Image.fromarray(img_rgb)
-                img_pil = img_pil.resize((640, 640), Image.Resampling.LANCZOS)
+                img_pil = img_pil.resize((self.view.display_size, self.view.display_size), Image.Resampling.LANCZOS)
 
-                # Convert the image to Tkinter format
+                # Convert image to Tkinter format
                 img_tk = ImageTk.PhotoImage(img_pil)
 
-                # Display the image
+                # Display the image in the label
                 self.view.label_image.config(image=img_tk)
                 self.view.label_image.image = img_tk
+
                 self.view.label_text.config( text= "Image number " +  str(self.model.current_index + 1) + " of " + str(len(self.model.image_paths)))
 
                 # Update model variables for SVG conversion
+                self.model.masks = masks
                 self.model.current_results = results
                 self.model.current_img_str = img_str
                 self.model.current_img = img_cv
@@ -164,7 +252,7 @@ class MainController:
                 self.display_svg_in_label()
 
                 # Create and display SVG content
-                self.model.current_svg_content = create_svg_content(results, img_str, self.model.transparency_svg, img_cv, self.model.mask_color)            
+                self.model.current_svg_content = create_svg_content(masks, img_str, self.model.transparency_svg, img_cv, self.model.mask_color, image_path)            
 
                 # Hide the progress bar
                 self.view.progress_bar.stop()
@@ -185,11 +273,7 @@ class MainController:
             # Execute inference in a separate thread
             threading.Thread(target=run_segmentation).start()
         else:
-            # Display completion message when all images are processed
-            tk.messagebox.showinfo("Processing complete", "All images have been processed.")
-            self.view.label_image.image = None  # Effacer l'image affichée
-            self.view.label_image_segmented.image = None
-            self.view.label_text.config( text= "No images being processed")
+            self.end()
 
     def process_all_images(self, process_function):
         def process_next_image():
@@ -216,9 +300,11 @@ class MainController:
 
             draw = ImageDraw.Draw(mask_img)
 
-            for mask in self.model.current_results[0].masks.xy:
-                points = [(int(point[0]), int(point[1])) for point in mask]
-                draw.polygon(points, outline=self.model.mask_fill, fill=self.model.mask_fill)  
+            for i, polygon  in enumerate(self.model.masks):
+                points = [(int(point[0]), int(point[1])) for point in polygon.exterior.coords]
+                outline_color = (0, 0, 255, 255) if i == self.model.selected_mask_index else self.model.mask_fill
+                width = 4 if i == self.model.selected_mask_index else 2
+                draw.polygon(points, outline=outline_color, fill=self.model.mask_fill, width=width)  
 
             # Combine base image with masks
             img_pil = Image.alpha_composite(img_pil, mask_img)
@@ -235,11 +321,23 @@ class MainController:
         self.model.current_img_pil_segmented = img_pil
 
         # Resize the image
-        img_pil = img_pil.resize((640, 640), Image.Resampling.LANCZOS)
+        img_pil = img_pil.resize((self.view.display_size, self.view.display_size), Image.Resampling.LANCZOS)
         
-        # Convert image to Tkinter format
-        img_tk = ImageTk.PhotoImage(img_pil)
+        self.model.current_img_draw = img_pil
 
-        # Display the image in the label
-        self.view.label_image_segmented.config(image=img_tk)
-        self.view.label_image_segmented.image = img_tk
+        self.view.update_image(img_pil)
+
+        self.view.add_mask_checkbox.pack(pady=10)
+
+    def end(self):
+        # Display completion message when all images are processed
+        tk.messagebox.showinfo("Processing complete", "All images have been processed.")
+        
+        # Uncheck the Checkbutton before hiding it
+        self.view.add_mask_var.set(0)
+        self.toggle_add_mask()
+        self.view.add_mask_checkbox.pack_forget()
+
+        self.view.label_image.image = None  # Erase the displayed image
+        self.view.label_image_segmented.image = None
+        self.view.label_text.config( text= "No images being processed")
