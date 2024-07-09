@@ -1,6 +1,6 @@
-train: "./train"
-val: "./valid"
-test: "./test"
+train: "path/to/train"
+val: "path/to/valid"
+test: "path/to/test"
 
 nc: 1
 names: ['petroglyphe']
