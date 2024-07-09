@@ -17,7 +17,7 @@ This is a simple desktop application built with Python and Tkinter for petroglyp
 2. Navigate to the project directory.
 3. Install the required dependencies using:
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt```
 
 ## YOLOv9 Training
 To train your YOLOv9 model, you need to organize your data into three main directories: `train`, `valid`, and `test`. Each of these directories must contain two subdirectories: `images` and `labels`.
