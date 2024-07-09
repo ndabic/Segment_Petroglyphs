@@ -4,11 +4,13 @@
 This is a simple desktop application built with Python and Tkinter for petroglyphs detection and segmentation using YOLO.
 
 ## Requirements
-- Python 3.x
-- Ultralytics YOLO
-- Pillow
-- OpenCV
-- Tkinter
+- Python 3.11
+- os
+- ultralytics
+- torch
+- PIL
+- cv2
+- tkinter
 - svgwrite
 - shapely
 
