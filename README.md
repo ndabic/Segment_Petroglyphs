@@ -97,7 +97,7 @@ Each `labels` directory should contain a corresponding text file (`.txt`) for ea
 
 Each line in a label file represents one object and should follow this format:
 
-0 <x1> <y1> … <xn> <yn>
+`0 <x1> <y1> ... <xn> <yn>`
 
 - `0`: This is the class ID. Since we want to segment only petroglyphs, the class ID is always 0.
 - `<x1> <y1> ... <xn> <yn>`: These are the normalized coordinates of the object in the image. The coordinates should be in the range [0, 1].
