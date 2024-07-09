@@ -23,17 +23,24 @@ def create_svg_content(polygons, img_str, transparency_svg, current_img, mask_co
     # Add segmentation masks
     if polygons != None:
         for i, polygon in enumerate(polygons):
-            points = [(int(point[0]), int(point[1])) for point in polygon.exterior.coords]
-            color = rgb(mask_color[0], mask_color[1] , mask_color[2])
-            dwg.add(dwg.polygon(
-                points, 
-                fill=color, 
-                fill_opacity=transparency_svg, 
-                stroke=color, 
-                stroke_opacity= transparency_svg,
-                id = f'{image_name}.{i+1}'
-                ))
-    
+            exterior_coords = [(int(point[0]), int(point[1])) for point in polygon.exterior.coords]
+            color = rgb(mask_color[0], mask_color[1], mask_color[2])
+            path_data = f'M {exterior_coords[0][0]},{exterior_coords[0][1]} ' + ' '.join([f'L {x},{y}' for x, y in exterior_coords[1:]]) + ' Z'
+            
+
+            for interior in polygon.interiors:
+                interior_coords = [(int(point[0]), int(point[1])) for point in interior.coords]
+                path_data += f' M {interior_coords[0][0]},{interior_coords[0][1]} ' + ' '.join([f'L {x},{y}' for x, y in interior_coords[1:]]) + ' Z'
+        
+            dwg.add(dwg.path(
+                d=path_data,
+                fill=color,
+                fill_opacity=transparency_svg,
+                stroke=color,
+                stroke_opacity=transparency_svg,
+                id=f'{image_name}.{i}'  # Naming the polygon with image name and index
+            ))
+        
     return dwg.tostring()
 
 def point_in_polygon(x, y, polygon):
@@ -67,13 +74,15 @@ def mask2polygon(results):
     return polygons
 
 def merge_polygons(polygons):    
-    # Merge overlapping polygons
-    merged_polygons = unary_union(polygons)
-        
-    # Check if the result is MultiPolygon
-    if isinstance(merged_polygons, MultiPolygon):
-        merged_polygons = list(merged_polygons.geoms)  # Convert MultiPolygon to list of Polygons
-    else:
-        merged_polygons = [merged_polygons]  # Convert single Polygon to a list
+    valid_polygons = []
+    for polygon in polygons:
+        if not polygon.is_valid:
+            polygon = polygon.buffer(0)
+        valid_polygons.append(polygon)
 
-    return merged_polygons
+    merged_polygons = unary_union(valid_polygons)
+
+    if isinstance(merged_polygons, MultiPolygon):
+        return list(merged_polygons.geoms)
+    else:
+        return [merged_polygons]

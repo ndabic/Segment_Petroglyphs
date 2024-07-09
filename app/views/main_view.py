@@ -11,8 +11,8 @@ class MainView(tk.Frame):
         self.display_size = 640
 
         self.photo = None
-        # Configure styles
 
+        # Configure styles
         # Change the background color of the main window
         self.master.config(bg="#1b384a")
 
@@ -74,6 +74,7 @@ class MainView(tk.Frame):
         self.button_create_both = ttk.Button(self.action_button_frame, text="Export SVG and JPG")
         self.button_create_both.pack(side=tk.LEFT, padx=10)
 
+        # Create a button to delete the selected mask
         self.delete_button = ttk.Button(self.action_button_frame, text="Delete Selected Mask")
         self.delete_button.pack(side=tk.LEFT, padx=10)
         self.delete_button.pack_forget()  # Hide the button initially
@@ -98,20 +99,31 @@ class MainView(tk.Frame):
         self.label_image_segmented = ttk.Label(self.image_frame)
         self.label_image_segmented.pack(side=tk.LEFT, padx=10)
 
-        # Create a frame for images
+        # Create a frame for mask editing
         self.mask_frame = tk.Frame(self.image_frame, bg="#1b384a")
         self.mask_frame.pack(pady=20)
 
-        # Create a checkbox
+        # Create a checkbox to set the mask adding mode
         self.add_mask_var = tk.IntVar()
         self.add_mask_checkbox = ttk.Checkbutton(self.mask_frame, text="Add Mask", variable=self.add_mask_var)
-        self.add_mask_checkbox.pack(pady=10)
+        self.add_mask_checkbox.pack(side="top", pady=10, expand=True)
         self.add_mask_checkbox.pack_forget() # Hide the checkbox initially
 
         # Create a button to complete the polygon
         self.complete_mask_button = ttk.Button(self.mask_frame, text="Complete Mask")
-        self.complete_mask_button.pack(pady=10)
+        self.complete_mask_button.pack(side="top", pady=10, expand=True)
         self.complete_mask_button.pack_forget()  # Hide the button initially
+
+        # Create a checkbox to set the hole adding mode
+        self.add_hole_var = tk.IntVar()
+        self.add_hole_checkbox = ttk.Checkbutton(self.mask_frame, text="Add Hole", variable=self.add_hole_var)
+        self.add_hole_checkbox.pack(side="top", pady=10, expand=True)
+        self.add_hole_checkbox.pack_forget() # Hide the checkbox initially
+
+        # Create a button to complete the polygon
+        self.complete_hole_button = ttk.Button(self.mask_frame, text="Complete Hole")
+        self.complete_hole_button.pack(side="top", pady=10, expand=True)
+        self.complete_hole_button.pack_forget()  # Hide the button initially
 
         # Create a progress bar
         self.progress_bar = ttk.Progressbar(self.text_frame, mode='indeterminate')

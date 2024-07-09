@@ -17,16 +17,24 @@ class MainController:
 
     def configure_view(self):
         self.view.load_button.config(command=self.select_image_folder)
+
         self.view.color_button.config(command=self.choose_color)
         self.view.transparency_scale.config(command=self.update_transparency)
         self.view.button_update_parameters.config(command=self.on_click_display_update)
+
         self.view.button_create_svg.config(command=self.OnClick_SVG)
         self.view.button_create_jpg.config(command=self.OnClick_JPG)
         self.view.button_create_both.config(command=self.OnClick_Both)
+
         self.view.delete_button.config(command=self.delete_selected_mask)
+
         self.view.all_checkbox.config(command=self.toggle_all)
         self.view.add_mask_checkbox.config(command=self.toggle_add_mask)
-        self.view.complete_mask_button.config(command=self.OnClick_Complete)
+        self.view.add_hole_checkbox.config(command=self.toggle_add_hole)
+
+        self.view.complete_mask_button.config(command=self.OnClick_Complete_Mask)
+        self.view.complete_hole_button.config(command=self.OnClick_Complete_Hole)
+
         self.view.label_image_segmented.bind("<Button-1>", self.OnClick_Mask)
         
 
@@ -47,13 +55,21 @@ class MainController:
             
             self.view.update_image(self.model.current_img_draw)
 
+        elif self.model.hole_adding:
+            self.model.new_hole_points.append([x_scaled, y_scaled])
+            # Draw point on the image
+            draw = ImageDraw.Draw(self.model.current_img_draw)
+            draw.ellipse((x-3, y-3, x+3, y+3), fill=self.model.complementary_color, outline=self.model.complementary_color)
+            
+            self.view.update_image(self.model.current_img_draw)
+            
         else: 
             self.model.selected_mask_index = self.get_mask_at_position(x_scaled, y_scaled)
             if self.model.selected_mask_index is not None:
                 self.view.delete_button.pack(side=tk.LEFT, padx=10) 
                 self.display_svg_in_label()
 
-    def OnClick_Complete(self):
+    def OnClick_Complete_Mask(self):
         if len(self.model.new_mask_points) > 2:
 
             points = [(int(point[0]), int(point[1])) for point in self.model.new_mask_points]
@@ -72,6 +88,40 @@ class MainController:
             self.display_svg_in_label()
             
             self.model.new_mask_points.clear()  # Clear points after drawing 
+    
+    def OnClick_Complete_Hole(self):
+        if len(self.model.new_hole_points) > 2:
+
+            for point in self.model.new_hole_points:
+                index2hole = self.get_mask_at_position(point[0], point[1])
+                if index2hole is not None:
+                    break
+            mask2hole = self.model.masks[index2hole]
+            
+            hole_points = [(int(point[0]), int(point[1])) for point in self.model.new_hole_points]
+
+            if mask2hole.interiors:
+                holes = list(mask2hole.interiors)
+                holes.append(hole_points)
+                bounding_coords = mask2hole.exterior
+                new_mask = Polygon(bounding_coords, holes)
+            else:
+                bounding_coords = mask2hole.exterior
+                new_mask = Polygon(bounding_coords, [hole_points])
+
+            self.model.masks[index2hole] = new_mask
+
+            # Create SVG and display it
+            image_path = self.model.image_paths[self.model.current_index]
+            masks = self.model.masks
+            img_str = self.model.current_img_str
+            transparency_svg = self.model.transparency_svg
+            current_img = self.model.current_img
+            mask_color = self.model.mask_color
+            self.model.current_svg_content = create_svg_content(masks, img_str, transparency_svg, current_img, mask_color, image_path)   
+            self.display_svg_in_label()
+            
+            self.model.new_hole_points.clear()  # Clear points after drawing 
 
     def get_mask_at_position(self, x, y):
         # Check if the coordinates (x, y) are inside one of the masks
@@ -115,12 +165,23 @@ class MainController:
     def toggle_add_mask(self):
         self.model.set_mask_adding(self.view.add_mask_var.get())
         if self.model.mask_adding: 
-            self.view.complete_mask_button.pack(pady=10)
+            self.view.add_hole_var.set(0)
+            self.toggle_add_hole()
+            self.view.complete_mask_button.pack(side="top", pady=10, expand=True)
         else:
             self.view.complete_mask_button.pack_forget()
 
+    def toggle_add_hole(self):
+        self.model.set_hole_adding(self.view.add_hole_var.get())
+        if self.model.hole_adding: 
+            self.view.add_mask_var.set(0)
+            self.toggle_add_mask()
+            self.view.complete_hole_button.pack(side="top", pady=10, expand=True)            
+        else:
+            self.view.complete_hole_button.pack_forget()
+
     def select_image_folder(self):
-        image_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg;*.png;*.bmp;*.jpeg;*.tif;*.tiff;*.pfm")])
+        image_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg;*.png;*.bmp;*.jpeg;*.tif;*.tiff;*.pfm")], parent=self.view.master) 
         if image_paths:
             self.model.set_image_paths(image_paths)
             self.display_segmentation()
@@ -181,6 +242,9 @@ class MainController:
     # Function to create JPG file
     def create_jpg(self, bool):
 
+        self.model.selected_mask_index = None
+        self.display_svg_in_label()
+
         if not os.path.exists(self.model.output_folder_JPG):
             os.makedirs(self.model.output_folder_JPG)
 
@@ -208,6 +272,10 @@ class MainController:
         self.view.add_mask_var.set(0)
         self.toggle_add_mask()
         self.view.add_mask_checkbox.pack_forget()
+
+        self.view.add_hole_var.set(0)
+        self.toggle_add_hole()
+        self.view.add_hole_checkbox.pack_forget()
         
         if self.model.current_index < len(self.model.image_paths):
             def run_segmentation():
@@ -306,6 +374,12 @@ class MainController:
                 width = 4 if i == self.model.selected_mask_index else 2
                 draw.polygon(points, outline=outline_color, fill=self.model.mask_fill, width=width)  
 
+                # Draw interiors (holes) with transparency if any exist
+                if polygon.interiors:
+                    for interior in polygon.interiors:
+                        interior_coords = [(int(point[0]), int(point[1])) for point in interior.coords]
+                        draw.polygon(interior_coords, fill=(255, 255, 255, 0))
+
             # Combine base image with masks
             img_pil = Image.alpha_composite(img_pil, mask_img)
 
@@ -327,7 +401,8 @@ class MainController:
 
         self.view.update_image(img_pil)
 
-        self.view.add_mask_checkbox.pack(pady=10)
+        self.view.add_mask_checkbox.pack(side="top", pady=10, expand=True)
+        self.view.add_hole_checkbox.pack(side="top", pady=10, expand=True)
 
     def end(self):
         # Display completion message when all images are processed
@@ -337,6 +412,10 @@ class MainController:
         self.view.add_mask_var.set(0)
         self.toggle_add_mask()
         self.view.add_mask_checkbox.pack_forget()
+
+        self.view.add_hole_var.set(0)
+        self.toggle_add_hole()
+        self.view.add_hole_checkbox.pack_forget()
 
         self.view.label_image.image = None  # Erase the displayed image
         self.view.label_image_segmented.image = None
