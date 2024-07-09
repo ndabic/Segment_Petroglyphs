@@ -28,33 +28,61 @@ To train your YOLOv9 model, you need to organize your data into three main direc
 Your directory structure should look like this:
 
 data/
+
 ├── train/
+
 │ ├── images/
+
 │ │ ├── image1.jpg
+
 │ │ ├── image2.jpg
+
 │ │ └── ...
+
 │ ├── labels/
+
 │ │ ├── image1.txt
+
 │ │ ├── image2.txt
+
 │ │ └── ...
+
 ├── valid/
+
 │ ├── images/
+
 │ │ ├── image1.jpg
+
 │ │ ├── image2.jpg
+
 │ │ └── ...
+
 │ ├── labels/
+
 │ │ ├── image1.txt
+
 │ │ ├── image2.txt
+
 │ │ └── ...
+
 ├── test/
+
 │ ├── images/
+
 │ │ ├── image1.jpg
+
 │ │ ├── image2.jpg
+
 │ │ └── ...
+
 │ ├── labels/
+
 │ │ ├── image1.txt
+
 │ │ ├── image2.txt
+
 │ │ └── ...
+
 
 
 ### Images Directory
@@ -79,6 +107,7 @@ Each line in a label file represents one object and should follow this format:
 For an image named `image1.jpg`, the corresponding label file `image1.txt` might look like this:
 
 0 0.1 0.2 0.3 0.4 0.5 0.6
+
 0 0.2 0.3 0.4 0.5 0.6 0.7
 
 In this example, there are two objects annotated in the image, both belonging to class 0.
