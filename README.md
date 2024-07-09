@@ -8,6 +8,7 @@ This is a simple desktop application built with Python and Tkinter for petroglyp
 - os
 - ultralytics
 - torch
+- gdown
 - PIL
 - cv2
 - tkinter

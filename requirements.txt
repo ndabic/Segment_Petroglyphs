@@ -1,6 +1,8 @@
 ultralytics
-Pillow
-opencv-python
+torch
+os
+PIL
+cv2
 tkinter
 svgwrite
 gdown
