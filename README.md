@@ -106,9 +106,9 @@ Each line in a label file represents one object and should follow this format:
 
 For an image named `image1.jpg`, the corresponding label file `image1.txt` might look like this:
 
-0 0.1 0.2 0.3 0.4 0.5 0.6
+`0 0.1 0.2 0.3 0.4 0.5 0.6`
 
-0 0.2 0.3 0.4 0.5 0.6 0.7
+`0 0.2 0.3 0.4 0.5 0.6 0.7`
 
 In this example, there are two objects annotated in the image, both belonging to class 0.
 
