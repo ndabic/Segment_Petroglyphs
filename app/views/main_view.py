@@ -6,7 +6,7 @@ class MainView(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
-        self.master.title("Petroglyph Segmentation Application")
+        self.master.title("PetroVision")
         self.master.geometry("1536x1024")
         self.display_size = 640
 
@@ -59,7 +59,7 @@ class MainView(tk.Frame):
 
         # Create a checkbox
         self.all_var = tk.IntVar()
-        self.all_checkbox = ttk.Checkbutton(self.action_button_frame, text="All", variable=self.all_var)
+        self.all_checkbox = ttk.Checkbutton(self.action_button_frame, text="For all", variable=self.all_var)
         self.all_checkbox.pack(side=tk.LEFT, padx=10)
 
         # Create a button to export SVG file for the current image

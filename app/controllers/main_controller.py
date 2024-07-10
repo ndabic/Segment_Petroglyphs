@@ -243,27 +243,28 @@ class MainController:
     def create_jpg(self, bool):
 
         self.model.selected_mask_index = None
-        self.display_svg_in_label()
+        if self.view.label_image.image != None:
+            self.display_svg_in_label()
 
-        if not os.path.exists(self.model.output_folder_JPG):
-            os.makedirs(self.model.output_folder_JPG)
+            if not os.path.exists(self.model.output_folder_JPG):
+                os.makedirs(self.model.output_folder_JPG)
 
-        # Build JPG file path
-        image_name = os.path.basename(self.model.image_paths[self.model.current_index]).split('.')[0]
-        jpg_file = os.path.join(self.model.output_folder_JPG, image_name + '.jpg')
+            # Build JPG file path
+            image_name = os.path.basename(self.model.image_paths[self.model.current_index]).split('.')[0]
+            jpg_file = os.path.join(self.model.output_folder_JPG, image_name + '.jpg')
 
-        # Save segmented image to disk in JPG format
-        self.model.current_img_pil_segmented.save(jpg_file)
+            # Save segmented image to disk in JPG format
+            self.model.current_img_pil_segmented.save(jpg_file)
 
-        if bool:
-            # Move to the next image
-            self.model.current_index += 1
-            
-            # Display segmentation of the next image if it exists
-            if self.model.current_index < len(self.model.image_paths):
-                self.display_segmentation()
-            else:
-                self.end()
+            if bool:
+                # Move to the next image
+                self.model.current_index += 1
+                
+                # Display segmentation of the next image if it exists
+                if self.model.current_index < len(self.model.image_paths):
+                    self.display_segmentation()
+                else:
+                    self.end()
 
     # Function to display segmentation of the current image
     def display_segmentation(self):   
@@ -286,17 +287,7 @@ class MainController:
                 _, buffer = cv2.imencode('.jpg', img_cv)
                 img_str = base64.b64encode(buffer).decode('utf-8')
 
-                # Perform inference
-                # Check if GPU is available
-                if torch.cuda.is_available():
-                    device = 'cuda:0'
-                else:
-                    device = 'cpu'
-
-                results = self.model.segmente(image_path, retina_masks=True, device = device, iou = 0.2)
-
-                polygons = mask2polygon(results)
-                masks = merge_polygons(polygons)
+                self.view.label_text.config( text= "Image number " +  str(self.model.current_index + 1) + " of " + str(len(self.model.image_paths)))
 
                 img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
                 img_pil = Image.fromarray(img_rgb)
@@ -309,7 +300,17 @@ class MainController:
                 self.view.label_image.config(image=img_tk)
                 self.view.label_image.image = img_tk
 
-                self.view.label_text.config( text= "Image number " +  str(self.model.current_index + 1) + " of " + str(len(self.model.image_paths)))
+                # Perform inference
+                # Check if GPU is available
+                if torch.cuda.is_available():
+                    device = 'cuda:0'
+                else:
+                    device = 'cpu'
+
+                results = self.model.segmente(image_path, retina_masks=True, device = device, iou = 0.2)
+
+                polygons = mask2polygon(results)
+                masks = merge_polygons(polygons)
 
                 # Update model variables for SVG conversion
                 self.model.masks = masks
