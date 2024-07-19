@@ -63,8 +63,9 @@ def point_in_polygon(x, y, polygon):
 def mask2polygon(results):
     # Collect all polygons
     polygons = []
-    masks = results[0].masks.xy
     if results[0].masks is not None:
+        masks = results[0].masks.xy
+        
         for i in range(len(masks)):
             points = [(int(point[0]), int(point[1])) for point in masks[i]]
             polygons.append(Polygon(points))
@@ -75,14 +76,17 @@ def mask2polygon(results):
 
 def merge_polygons(polygons):    
     valid_polygons = []
-    for polygon in polygons:
-        if not polygon.is_valid:
-            polygon = polygon.buffer(0)
-        valid_polygons.append(polygon)
+    if polygons is not None:
+        for polygon in polygons:
+            if not polygon.is_valid:
+                polygon = polygon.buffer(0)
+            valid_polygons.append(polygon)
 
-    merged_polygons = unary_union(valid_polygons)
+        merged_polygons = unary_union(valid_polygons)
 
-    if isinstance(merged_polygons, MultiPolygon):
-        return list(merged_polygons.geoms)
+        if isinstance(merged_polygons, MultiPolygon):
+            return list(merged_polygons.geoms)
+        else:
+            return [merged_polygons]
     else:
-        return [merged_polygons]
+        return None

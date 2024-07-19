@@ -31,6 +31,8 @@ class YoloModel:
 
         self.mask_adding = False
         self.hole_adding = False
+        self.separating = False
+        self.separator = None
         self.selected_mask_index = None
 
         self.new_mask_points = []
@@ -62,5 +64,8 @@ class YoloModel:
 
     def set_hole_adding(self, hole_adding):
         self.hole_adding = hole_adding
+
+    def set_separating(self, separating):
+        self.separating = separating
 
 
